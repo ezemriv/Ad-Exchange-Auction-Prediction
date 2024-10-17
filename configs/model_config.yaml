@@ -1,0 +1,14 @@
+# configs/model_config.yaml
+
+baseline_model:
+  model_type: LogisticRegression
+  parameters:
+    random_state: 23
+    max_iter: 1000
+
+advanced_model:
+  model_type: LightGBM
+  parameters:
+    objective: binary
+    verbosity: -1
+    random_state: 23

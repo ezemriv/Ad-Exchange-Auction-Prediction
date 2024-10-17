@@ -14,5 +14,6 @@ dependencies:
   - lightgbm
   - mlflow
   - pyyaml
+  - polars
   - pip:
     - shap
