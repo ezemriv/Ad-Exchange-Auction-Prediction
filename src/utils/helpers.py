@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import math
+from imblearn.pipeline import Pipeline
+import os
 
 class InitialEDA:
     """Class for performing exploratory data analysis (EDA) on a DataFrame."""
@@ -54,3 +56,43 @@ class Preprocessing():
             to_replace = freq[freq < threshold].index
             df[col].replace(to_replace, new_value, inplace=True)
         return df
+    
+def plot_cross_validation_scores(train_scores, valid_scores, results_folder):
+    """Plots and saves the cross-validation scores."""
+    plt.figure()
+    plt.plot(range(1, len(train_scores) + 1), train_scores,
+             marker='o', label='Train F1 Score', linestyle='-')
+    plt.plot(range(1, len(valid_scores) + 1), valid_scores,
+             marker='o', label='Validation F1 Score', linestyle='-')
+    plt.xlabel('Fold')
+    plt.ylabel('F1 Score')
+    plt.title('Train and Validation F1 Scores')
+    plt.legend()
+    cv_plot_path = os.path.join(results_folder, 'cross_validation_scores.png')
+    plt.savefig(cv_plot_path)
+    plt.close()
+    print(f"Cross-validation plot saved to {cv_plot_path}")
+
+def plot_feature_importances(model, FEATURES, results_folder):
+    """Plots and saves the feature importances."""
+    # Handle pipeline if oversampling is used
+    if isinstance(model, Pipeline):
+        classifier = model.named_steps['classifier']
+    else:
+        classifier = model
+
+    # Get feature importances
+    importances = classifier.feature_importances_
+    importances_df = pd.DataFrame({
+        'feature': FEATURES,
+        'importance': importances
+    }).sort_values(by='importance', ascending=False)
+
+    # Plot feature importances
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x='importance', y='feature', data=importances_df)
+    plt.title('Feature Importances')
+    fi_plot_path = os.path.join(results_folder, 'feature_importances.png')
+    plt.savefig(fi_plot_path)
+    plt.close()
+    print(f"Feature importance plot saved to {fi_plot_path}")

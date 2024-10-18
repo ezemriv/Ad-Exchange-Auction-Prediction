@@ -12,7 +12,7 @@ class FeatureEngineering:
         # to_log = ['flw', 'sellerClearPrice', 'price']
 
         # df = df.with_columns([
-        #     pl.col(col).log() if col in to_log else pl.col(col)
+        #     (pl.col(col) + 1).log() for col in to_log
         # ])
         
         return df
