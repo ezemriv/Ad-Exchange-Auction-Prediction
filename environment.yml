@@ -1,4 +1,4 @@
-name: ad_exchange_pred
+name: ad_exchange_pred_test2
 channels:
   - conda-forge
   - defaults
@@ -8,14 +8,13 @@ dependencies:
   - numpy
   - pandas
   - scikit-learn
-  - imblearn
   - matplotlib
   - seaborn
   - jupyter
   - lightgbm
-  - mlflow
   - pyyaml
   - polars
   - optuna
   - pip:
-    - shap
+    - imblearn
+    - pyarrow

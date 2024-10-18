@@ -8,9 +8,9 @@ data_paths:
 
 parameters:
   benchmark_f1: 0.503
-  neg_ratio: 10     # 5 For full train
-  sampling: True
-  check_feature_importance: True
+  neg_ratio: 5     # 5 For full train
+  sampling: False
+  check_feature_importance: False
 
 model_parameters:
   objective: 'binary'
@@ -21,8 +21,8 @@ model_parameters:
   n_estimators: 200
 
 training_parameters:
-  do_oversampling: True
-  do_crossvalidation: True
+  do_oversampling: False
+  do_crossvalidation: False
   n_splits: 5
   shuffle: True
   random_state: 23

@@ -80,6 +80,10 @@ def train_model_inference(train, test, FEATURES, TARGET, config):
 
     # Calculate UP_RATIO
     UP_RATIO = round((NEG_RATIO / 100) * multiplier, 5)
+    if do_oversampling:
+        print(f"Oversampling with UP_RATIO: {UP_RATIO}")
+    else:
+        print(f"No oversampling")
 
     # Set up the estimator pipeline
     if do_oversampling:
@@ -159,7 +163,8 @@ def save_metrics(metrics, predictions, test, model, FEATURES, config):
     os.makedirs(results_folder, exist_ok=True)
 
     # Save Metrics to a Text File
-    metrics_file = os.path.join(results_folder, 'metrics.txt')
+    timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
+    metrics_file = os.path.join(results_folder, f'metrics_{timestamp}.txt')
     with open(metrics_file, 'w') as f:
         # Write cross-validation metrics if available
         if 'mean_train_score' in metrics:
