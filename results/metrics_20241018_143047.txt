@@ -1,0 +1,4 @@
+Mean Train F1 Score: 0.72091
+Mean Validation F1 Score: 0.71856
+Test F1 Score: 0.61879
+Improvement over Benchmark: 23.02%

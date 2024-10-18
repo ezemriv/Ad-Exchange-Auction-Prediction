@@ -10,7 +10,7 @@ parameters:
   benchmark_f1: 0.503
   neg_ratio: 5     # 5 For full train
   sampling: False
-  check_feature_importance: False
+  check_feature_importance: True
 
 model_parameters:
   objective: 'binary'
@@ -22,7 +22,7 @@ model_parameters:
 
 training_parameters:
   do_oversampling: False
-  do_crossvalidation: False
+  do_crossvalidation: True
   n_splits: 5
   shuffle: True
   random_state: 23
