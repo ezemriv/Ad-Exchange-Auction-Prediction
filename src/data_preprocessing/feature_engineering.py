@@ -1,70 +1,78 @@
-# src/data_preprocessing/feature_engineering.py
-
 import polars as pl
+import numpy as np
+from sklearn.preprocessing import OrdinalEncoder
 
 class FeatureEngineering:
     
     def __init__(self):
-        pass
+        self.category_encoder = None
     
     def feature_engineering(self, df):
-        
-        df = df.with_columns([
-            pl.col('bundle').to_physical().cast(pl.String).alias("bundle_int").cast(pl.Categorical),
-        ])
-        
-        df = df.drop('bundle')
+
+        # to_log = ['flw', 'sellerClearPrice', 'price']
+
+        # df = df.with_columns([
+        #     pl.col(col).log() if col in to_log else pl.col(col)
+        # ])
         
         return df
 
     def grouped_feature_engineering(self, df):
-            
-                    
-            # df = df.with_columns([     
-                
-            #     # Ratio of tbp_lv_contrast_A to age average
-            #     pl.col('tbp_lv_contrast_A').truediv(pl.col('tbp_lv_contrast_A').mean())
-            #     .over('age_approx')
-            #     .cast(pl.Float32).alias('tbp_lv_age_contrast_A'),
-                
-            # ])
-            
-           
-            return df
-  
-    def downsample_data_pl(self, df: pl.DataFrame, neg_ratio: float = None, is_train: bool = True) -> pl.DataFrame:
-        
-        if is_train:
-            # Extract the counts of positive and negative cases
-            p_cases = df.filter(pl.col('target') == 1)
-            n_cases = df.filter(pl.col('target') == 0)
-
-            # If neg_ratio is None use all negative samples
-            if neg_ratio is not None:
-                N = int(p_cases.height * neg_ratio)
-                n_cases = n_cases.sample(n=N, seed=23)
-            
-            # Concatenar los casos negativos y positivos
-            df = pl.concat([n_cases, p_cases])
-            
+        # Grouped feature engineering code
         return df
+  
+    def encode_categoricals(self, df, cat_cols, is_train=True):
+        """
+        Encodes categorical columns using OrdinalEncoder.
+        
+        Parameters:
+        - df (pl.DataFrame): The input DataFrame.
+        - cat_cols (list): List of categorical column names to encode.
+        - is_train (bool): Flag indicating whether the data is training data.
+        
+        Returns:
+        - pl.DataFrame: The DataFrame with encoded categorical columns.
+        """
+        if is_train:
+            # Initialize and fit the encoder on training data
+            self.category_encoder = OrdinalEncoder(
+                categories='auto', dtype=np.int16, 
+                handle_unknown='use_encoded_value', 
+                unknown_value=-2, encoded_missing_value=-1
+            )
+            # Fit and transform the category columns
+            data_encoded = self.category_encoder.fit_transform(df.select(cat_cols))
+        else:
+            # Ensure the encoder has been fitted
+            if self.category_encoder is None:
+                raise ValueError("The encoder has not been fitted. Call encode_categoricals with is_train=True first.")
+            # Transform the test data with the same encoder
+            data_encoded = self.category_encoder.transform(df.select(cat_cols))
+        
+        # Assign the transformed categories back to the Polars DataFrame
+        encoded_columns = [
+            pl.Series(cat_col, data_encoded[:, idx]) 
+            for idx, cat_col in enumerate(cat_cols)
+        ]
+        df = df.with_columns(encoded_columns)
+        
+        # Cast all the cat_cols back to categorical
+        df = df.with_columns([
+            pl.col(col).cast(pl.String).cast(pl.Categorical) for col in cat_cols
+        ])
+        
+        return df
+    
+    def proccess(self, df, cat_cols, is_train=True):
 
-    def process_data(self, df, neg_ratio=None, is_train=True, img_fea_path=None):
+        # Feature engineering
+        df = self.feature_engineering(df)
+        df = self.grouped_feature_engineering(df)
 
-        if DOMAIN_FEATURES:
-            # Create initial features
-            df = self.feature_engineering(df)
+        # Encode categorical columns
+        df = self.encode_categoricals(df, cat_cols, is_train)
 
-        # # Check if group-specific features should be added
-        # if GROUP_FEATURES:
-        #     # Create age and patient group features
-        #     df = self.grouped_feature_engineering(df)
-
-        # Downsample data if image features are not used
-        if DOWNSAMPLE:
-            df = self.downsample_data_pl(df, neg_ratio, is_train)
-
-        # Convert to pandas DataFrame
+        #Convert to pandas dataframe
         df = df.to_pandas()
 
         return df

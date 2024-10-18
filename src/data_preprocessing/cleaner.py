@@ -30,7 +30,8 @@ class PolarsLoader():
             N_ROWS = None
 
         # Read dataset as polars DataFrame
-        df = pl.read_csv(path, low_memory=True, 
+        df = pl.read_csv(path, low_memory=True,
+                         batch_size=100_000, 
                          n_rows=N_ROWS
                          )
         
@@ -43,11 +44,44 @@ class PolarsLoader():
             'ssp'
         ]
 
-        for col in to_drop:
-            if col in df.columns:
-                df = df.drop(col)
+        df = (
+                df.select([
+                    pl.col('*').exclude(to_drop)
+                ])
+                .with_columns([ # Reduce string values in "bundle"
+                    pl.col('bundle').cast(pl.Utf8).str.slice(12, 20)
+                ])
+            )
 
         return df 
+    
+    def downsample_data_pl(self, df: pl.DataFrame, neg_ratio: float = None, is_train: bool = True) -> pl.DataFrame:
+        
+        """
+        Downsample the negative class of a DataFrame if is_train is True.
+
+        Parameters:
+            df (polars.DataFrame): DataFrame to be downsampled.
+            neg_ratio (float): Ratio of negative samples to positive samples. If None, all negative samples are used. Defaults to None.
+            is_train (bool): If True, downsamples data. Defaults to True.
+
+        Returns:
+            polars.DataFrame: Downsampled DataFrame if is_train is True.
+        """
+        if is_train:
+            # Extract the counts of positive and negative cases
+            p_cases = df.filter(pl.col('target') == 1)
+            n_cases = df.filter(pl.col('target') == 0)
+
+            # If neg_ratio is None use all negative samples
+            if neg_ratio is not None:
+                N = int(p_cases.height * neg_ratio)
+                n_cases = n_cases.sample(n=N, seed=23)
+            
+            # Concatenar los casos negativos y positivos
+            df = pl.concat([n_cases, p_cases])
+            
+        return df
     
     def set_datatypes(self, df):
         """
@@ -100,44 +134,33 @@ class PolarsLoader():
             # 'dc'
         ]
 
-        for col in int_cols:
-            
-            # Set dtype for numeric columns (int)
-            if col in df.columns:
-                df = df.with_columns(pl.col(col).cast(pl.Int16))
-                        
-        for col in float_cols:
-            
-            # Set dtype for numeric columns (float)
-            if col in df.columns:
-                df = df.with_columns(pl.col(col).cast(pl.Float32))
+        # Set dtype for numeric columns (int)
+        df = df.with_columns([pl.col(col).cast(pl.Int16) for col in int_cols])
+                                    
+        # Set dtype for numeric columns (float)
+        df = df.with_columns([pl.col(col).cast(pl.Float32) for col in float_cols])
                 
-        for col in cat_cols:
-            
-            # Set dtype for categorical columns
-            if col in df.columns:
-                df = df.with_columns(pl.col(col).cast(pl.String).cast(pl.Categorical))
+        # Set dtype for categorical columns
+        df = df.with_columns([pl.col(col).cast(pl.String).cast(pl.Categorical) for col in cat_cols])
 
-            # Handle NA values in categorical columns - Replace the value with "unknown"
-                df = df.with_columns(pl.col(col).fill_null('unknown'))
+        # Handle NA values in categorical columns - Replace the value with "unknown"
+        df = df.with_columns([pl.col(col).fill_null('unknown') for col in cat_cols])
 
         num_cols = float_cols + int_cols
         num_cols.remove('target')
         
         return df, cat_cols, num_cols
     
-    def initial_preprocessing(self, df):
+    def initial_preprocessing(self, df, neg_ratio=None, is_train=True):
 
         with StringCache():
             # Filter data
             df = self.load_data(df)
+
+            # Downsample train data
+            df = self.downsample_data_pl(df, neg_ratio=neg_ratio, is_train=is_train)
             
             # Set datatypes
             df, cat_cols, num_cols = self.set_datatypes(df)
         
         return df, cat_cols, num_cols
-    
-    def save_clean_data(self, df, filepath):
-        
-        df.write_parquet(filepath)
-        print(f"Cleaned data saved at {filepath}")

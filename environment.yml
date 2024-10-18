@@ -8,6 +8,7 @@ dependencies:
   - numpy
   - pandas
   - scikit-learn
+  - imblearn
   - matplotlib
   - seaborn
   - jupyter
@@ -15,5 +16,6 @@ dependencies:
   - mlflow
   - pyyaml
   - polars
+  - optuna
   - pip:
     - shap
