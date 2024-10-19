@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import polars as pl
 import matplotlib.pyplot as plt
 import seaborn as sns
 import math
@@ -44,18 +45,41 @@ class InitialEDA:
         plt.tight_layout()
         plt.show()
 
-class Preprocessing():
-    """Class for data preprocessing tasks."""
+def replace_less_frequent_polars(df: pl.DataFrame, list_col: list[str], 
+                                 threshold: float = 0.05, new_value='other', 
+                                 replace_values: dict = None) -> tuple[pl.DataFrame, dict]:
 
-    @staticmethod
-    def replace_less_frequent(df: pd.DataFrame, list_col: list[str], 
-                              threshold: float = 0.02, new_value='other') -> pd.DataFrame:
-        """Replaces less frequent values in specified columns of a DataFrame with a new value."""
-        for col in list_col:
-            freq = df[col].value_counts(normalize=True)
-            to_replace = freq[freq < threshold].index
-            df[col].replace(to_replace, new_value, inplace=True)
-        return df
+    """
+    NEEDS POLARS StringCache()!!
+
+    Replaces less frequent values in specified columns of a DataFrame with a new value.
+    If replace_values is provided, it uses that list of values to replace in the columns.
+    """
+    if replace_values is None:
+        replace_values = {}
+
+    for col in list_col:
+        # If replace_values are not provided, calculate them from the DataFrame
+        if col not in replace_values:
+            vals_to_replace = (
+                df[col].value_counts(normalize=True, sort=True)
+                .filter(pl.col("proportion") < threshold)[col]
+                .to_list()
+            )
+            replace_values[col] = vals_to_replace  # Store these values for later use (train set)
+        else:
+            vals_to_replace = replace_values[col]  # Use pre-defined values for replacement (test set)
+
+        # Replace less frequent values with `new_value`
+        df = df.with_columns([
+                pl.when(pl.col(col).is_in(vals_to_replace))
+                .then(pl.lit(new_value))
+                .otherwise(pl.col(col))
+                .alias(col)
+                .cast(pl.Categorical)
+        ])
+
+    return df, replace_values  # Return the modified DataFrame and the replace values for reuse
     
 def plot_cross_validation_scores(train_scores, valid_scores, results_folder):
     """Plots and saves the cross-validation scores."""

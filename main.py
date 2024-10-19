@@ -6,6 +6,7 @@ import yaml
 import pandas as pd
 import numpy as np
 import polars as pl
+from polars import StringCache
 
 from sklearn.model_selection import KFold, cross_validate
 from sklearn.metrics import f1_score
@@ -29,6 +30,7 @@ def load_config(config_file='configs/model_config.yaml'):
     return config
 
 def process_data(config):
+
     """Loads and preprocesses the training and test data."""
     # Set up data paths
     TRAIN_FILE = config['data_paths']['train_file']
@@ -199,7 +201,8 @@ def main():
     config = load_config()
 
     # Process data
-    train, test, FEATURES, TARGET = process_data(config)
+    with StringCache():
+        train, test, FEATURES, TARGET = process_data(config)
     print("\nData processed successfully.")
     #Print data information
     print("-"*50)

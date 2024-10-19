@@ -1,20 +1,43 @@
 import polars as pl
+from polars import StringCache
+import pandas as pd
 import numpy as np
 from sklearn.preprocessing import OrdinalEncoder
+from src.utils.helpers import replace_less_frequent_polars
 
 class FeatureEngineering:
     
     def __init__(self):
         self.category_encoder = None
+        self.low_freq_values = {}  # Stores low-frequency values identified during training
     
-    def feature_engineering(self, df):
+    def feature_engineering(self, df, is_train=True):
+        # Apply log transformation to price columns
+        df = df.with_columns([
+            (pl.col(col) + 1).log().alias(col) 
+            for col in ['flw', 'sellerClearPrice', 'price'] 
+            if col in df.columns
+        ])
 
-        # to_log = ['flw', 'sellerClearPrice', 'price']
+        # Extract general language from lang col
+        df = df.with_columns([
+            pl.col("lang")
+            .cast(pl.String)
+            .str.split_exact("_", 1)  
+            .struct.field("field_0")  # Extract only the "first_part"
+            .alias("lang")
+            .cast(pl.Categorical)
+        ])
 
-        # df = df.with_columns([
-        #     (pl.col(col) + 1).log() for col in to_log
-        # ])
-        
+        # Group low frequency categories into "other"
+        low_freq = ['sdkver', 'lang', 'country', 'region']
+
+        # If it's training data, find and store the low-frequency values; if test, reuse stored values
+        if is_train:
+            df, self.low_freq_values = replace_less_frequent_polars(df, low_freq, threshold=0.01, replace_values=None)
+        else:
+            df, _ = replace_less_frequent_polars(df, low_freq, threshold=0.01, replace_values=self.low_freq_values)
+
         return df
 
     def grouped_feature_engineering(self, df):
@@ -65,14 +88,15 @@ class FeatureEngineering:
     
     def proccess(self, df, cat_cols, is_train=True):
 
-        # Feature engineering
-        df = self.feature_engineering(df)
-        df = self.grouped_feature_engineering(df)
+        with StringCache():
 
-        # Encode categorical columns
-        df = self.encode_categoricals(df, cat_cols, is_train)
+            # Feature engineering
+            df = self.feature_engineering(df, is_train)
 
-        #Convert to pandas dataframe
+            # df = self.grouped_feature_engineering(df)
+            df = self.encode_categoricals(df, cat_cols, is_train) # -> same result. LightGBM handles them automatically
+
+        # Convert to pandas dataframe
         df = df.to_pandas()
 
         return df
