@@ -19,6 +19,9 @@ import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+import mlflow
+import mlflow.lightgbm
+
 # Import helper functions
 from src.data_preprocessing.cleaner import PolarsLoader
 from src.data_preprocessing.feature_engineering import FeatureEngineering
@@ -63,7 +66,15 @@ def process_data(config):
     train, NEW_COLS = fe.proccess(train, CAT_COLS, is_train=True)
     test, _ = fe.proccess(test, CAT_COLS, is_train=False)
     
-    FEATURES += NEW_COLS
+    FEATURES# += NEW_COLS
+
+    # Log data parameters
+    mlflow.log_param("neg_ratio", NEG_RATIO)
+    mlflow.log_param("sampling", SAMPLING)
+    mlflow.log_param("train_size", train.shape[0])
+    mlflow.log_param("test_size", test.shape[0])
+    mlflow.log_param("num_features", len(FEATURES))
+    mlflow.log_dict({"features_added": NEW_COLS}, "features_added.json")
 
     return train, test, FEATURES, TARGET
 
@@ -75,6 +86,7 @@ def train_model_inference(train, test, FEATURES, TARGET, config):
 
     # Model parameters
     lgb_params = config['model_parameters']
+    mlflow.log_params(lgb_params)
 
     # Training parameters
     training_params = config['training_parameters']
@@ -135,6 +147,9 @@ def train_model_inference(train, test, FEATURES, TARGET, config):
         metrics['valid_scores'] = results['test_score']
         metrics['mean_train_score'] = np.mean(results['train_score'])
         metrics['mean_valid_score'] = np.mean(results['test_score'])
+
+        mlflow.log_metric("mean_train_f1", metrics['mean_train_score'])
+        mlflow.log_metric("mean_valid_f1", metrics['mean_valid_score'])
     else:
         print("Skipping cross-validation.")
 
@@ -161,6 +176,10 @@ def train_model_inference(train, test, FEATURES, TARGET, config):
     # Save metrics
     metrics['test_f1_score'] = test_f1
     metrics['improvement_over_benchmark'] = improvement
+
+    # Log final test metrics
+    mlflow.log_metric("test_f1_score", test_f1)
+    mlflow.log_metric("improvement_over_benchmark", improvement)
 
     return estimator, metrics, predictions
 
@@ -207,6 +226,13 @@ def main():
     # Load configuration
     config = load_config()
 
+    # Start MLflow run
+    mlflow.start_run()
+
+    # Log config parameters
+    mlflow.log_param("cross_validation", config['training_parameters']['do_crossvalidation'])
+    mlflow.log_param("oversampling", config['training_parameters']['do_oversampling'])
+
     # Process data
     with StringCache():
         train, test, FEATURES, TARGET = process_data(config)
@@ -234,8 +260,14 @@ def main():
     joblib.dump(model, model_save_path)
     print(f"Trained model saved at {model_save_path}")
 
+    # Log the model
+    mlflow.lightgbm.log_model(model, "model")
+
     # Save metrics and predictions
     save_metrics(metrics, predictions, test, model, FEATURES, config)
     
+    # End MLflow run
+    mlflow.end_run()
+
 if __name__ == '__main__':
     main()

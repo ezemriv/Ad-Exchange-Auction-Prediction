@@ -8,9 +8,9 @@ data_paths:
 
 parameters:
   benchmark_f1: 0.503
-  neg_ratio: 4.919339318126806 # Tuned
-  sampling: False
-  check_feature_importance: False
+  neg_ratio: 3 # 4.919339318126806 # Tuned
+  sampling: True
+  check_feature_importance: True
 
 model_parameters: # Tuned
   objective: 'binary'
@@ -27,7 +27,7 @@ model_parameters: # Tuned
   
 training_parameters:
   do_oversampling: False
-  do_crossvalidation: False
+  do_crossvalidation: True
   n_splits: 5
   shuffle: True
   random_state: 23
