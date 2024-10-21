@@ -2,6 +2,8 @@
 
 import polars as pl
 from polars import StringCache
+import pandas as pd
+import numpy as np
 
 class PolarsLoader():
     def __init__(self, sampling=False):
@@ -41,7 +43,8 @@ class PolarsLoader():
             'sdk',
             'adt',
             'dc',
-            'ssp'
+            'ssp',
+            'os' #--> not important feature (feature importance) 
         ]
 
         df = (
@@ -122,7 +125,7 @@ class PolarsLoader():
             'auctionBidFloorSource',
             'sdkver',
             'bundle',
-            'os',
+            # 'os',
             'lang',
             'country',
             'region',

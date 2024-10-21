@@ -2,10 +2,12 @@
 
 import sys
 import os
+import time
 import yaml
 import pandas as pd
 import numpy as np
 import polars as pl
+from polars import StringCache
 
 from sklearn.model_selection import KFold, cross_validate
 from sklearn.metrics import f1_score
@@ -22,13 +24,14 @@ from src.data_preprocessing.cleaner import PolarsLoader
 from src.data_preprocessing.feature_engineering import FeatureEngineering
 from src.utils.helpers import plot_cross_validation_scores, plot_feature_importances
 
-def load_config(config_file='configs/model_config.yaml'):
+def load_config(config_file='configs/config.yaml'):
     """Loads configuration parameters from a YAML file."""
     with open(config_file, 'r') as file:
         config = yaml.safe_load(file)
     return config
 
 def process_data(config):
+
     """Loads and preprocesses the training and test data."""
     # Set up data paths
     TRAIN_FILE = config['data_paths']['train_file']
@@ -57,8 +60,10 @@ def process_data(config):
     fe = FeatureEngineering()
 
     # Process training and test data
-    train = fe.proccess(train, CAT_COLS, is_train=True)
-    test = fe.proccess(test, CAT_COLS, is_train=False)
+    train, NEW_COLS = fe.proccess(train, CAT_COLS, is_train=True)
+    test, _ = fe.proccess(test, CAT_COLS, is_train=False)
+    
+    FEATURES += NEW_COLS
 
     return train, test, FEATURES, TARGET
 
@@ -135,7 +140,11 @@ def train_model_inference(train, test, FEATURES, TARGET, config):
 
     # Train the final model on the entire training data
     print("\n", "Training final model...")
+    start_time = time.time()
     estimator.fit(X, y)
+    end_time = time.time()
+    training_time = end_time - start_time
+    print(f"Training time: {training_time:.2f} seconds")
 
     # Make predictions on the test set
     predictions = estimator.predict(test[FEATURES])
@@ -199,7 +208,8 @@ def main():
     config = load_config()
 
     # Process data
-    train, test, FEATURES, TARGET = process_data(config)
+    with StringCache():
+        train, test, FEATURES, TARGET = process_data(config)
     print("\nData processed successfully.")
     #Print data information
     print("-"*50)

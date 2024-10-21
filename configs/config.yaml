@@ -1,0 +1,37 @@
+# configs/config.yaml
+
+data_paths:
+  train_file: 'data/train_data.csv'
+  test_file: 'data/test_data.csv'
+  results_folder: 'results/'
+  model_save_path: 'models/trained_model.pkl'
+
+parameters:
+  benchmark_f1: 0.503
+  neg_ratio: 6.683341808962789 # Tuned # Best before 5
+  sampling: True
+  check_feature_importance: True
+
+model_parameters:
+  objective: 'binary'
+  metric: 'f1'
+  verbose: -1
+  random_state: 23
+  boosting_type: 'gbdt'
+  n_estimators: 469 # Tuned
+  num_leaves: 128
+  learning_rate: 0.14177380106482101
+  subsample: 0.6110535775752338
+  colsample_bytree: 0.8716627599826557
+  reg_alpha: 2.127514601402151
+  reg_lambda: 6.6903430013426295
+  
+
+training_parameters:
+  do_oversampling: False
+  do_crossvalidation: False
+  n_splits: 5
+  shuffle: True
+  random_state: 23
+  scoring: 'f1'
+  multiplier: 1.5  # to calculate UP_RATIO
