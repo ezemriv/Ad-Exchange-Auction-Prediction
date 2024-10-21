@@ -33,7 +33,7 @@ def objective(trial):
     config = load_config()
     
     # Hyperparameters to tune
-    NEG_RATIO = trial.suggest_float('neg_ratio', 1, 7)
+    NEG_RATIO = trial.suggest_float('neg_ratio', 2, 6)
 
     # LightGBM parameters
     lgb_params = {
@@ -42,42 +42,51 @@ def objective(trial):
         'verbose': -1,
         'random_state': 23,
         'boosting_type': 'gbdt',
-        'n_estimators': trial.suggest_int('n_estimators', 200, 500),
+        'n_estimators': 500,
         'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.1, log=True),
         'max_depth': trial.suggest_int('max_depth', 3, 6),
         'num_leaves': trial.suggest_int('num_leaves', 20, 64),
         'subsample': trial.suggest_float('subsample', 0.5, 1.0),
-        'subsample_freq': trial.suggest_int('subsample_freq', 1, 5),
-        'min_data_in_leaf': trial.suggest_int('min_data_in_leaf', 20, 200),
-        'lambda_l1': trial.suggest_float('lambda_l1', 1e-4, 1.0, log=True),
         'lambda_l2': trial.suggest_float('lambda_l2', 1e-4, 1.0, log=True),
-        'scale_pos_weight': trial.suggest_float('scale_pos_weight', 1e-2, 10.0, log=True),
-        'feature_fraction': trial.suggest_float('feature_fraction', 0.5, 1.0),
-        'bagging_fraction': trial.suggest_float('bagging_fraction', 0.5, 1.0),
-        'bagging_freq': trial.suggest_int('bagging_freq', 1, 7),
-        'min_child_samples': trial.suggest_int('min_child_samples', 20, 100)
-}
+    }
     
-    # Data processing
-    SAMPLING = config['parameters']['sampling']
     with StringCache():
+        # Data processing
+        # Set up data paths
+        TRAIN_FILE = config['data_paths']['train_file']
+        TEST_FILE = config['data_paths']['test_file']
+        SAMPLING = config['parameters']['sampling']
+
+        # Initialize data loader
         pp = PolarsLoader(sampling=SAMPLING)
-        train_data, CAT_COLS, NUM_COLS = pp.initial_preprocessing(
-            config['data_paths']['train_file'], is_train=True, neg_ratio=NEG_RATIO
+
+        # Load and preprocess training data
+        train, CAT_COLS, NUM_COLS = pp.initial_preprocessing(
+            TRAIN_FILE, is_train=True, neg_ratio=NEG_RATIO
         )
-        test_data, _, _ = pp.initial_preprocessing(
-            config['data_paths']['test_file'], is_train=False
+
+        # Load and preprocess test data
+        test, _, _ = pp.initial_preprocessing(
+            TEST_FILE, is_train=False
         )
+
+        # Define features and target
+        FEATURES = CAT_COLS + NUM_COLS
+        TARGET = 'target'
+
+        # Initialize feature engineering
         fe = FeatureEngineering()
-        train = fe.proccess(train_data, CAT_COLS, is_train=True)
-        test = fe.proccess(test_data, CAT_COLS, is_train=False)
-    
-    FEATURES = CAT_COLS + NUM_COLS
-    TARGET = 'target'
-    X_train = train[FEATURES]
-    y_train = train[TARGET]
-    X_test = test[FEATURES]
-    y_test = test[TARGET]
+
+        # Process training and test data
+        train, NEW_COLS = fe.proccess(train, CAT_COLS, is_train=True)
+        test, _ = fe.proccess(test, CAT_COLS, is_train=False)
+        
+        FEATURES += NEW_COLS
+
+        X_train = train[FEATURES]
+        y_train = train[TARGET]
+        X_test = test[FEATURES]
+        y_test = test[TARGET]
 
     # Train the model
     estimator = lgb.LGBMClassifier(**lgb_params)
@@ -126,15 +135,7 @@ def save_best_params_and_metrics(trial, metrics):
     # Load existing config
     config = load_config()
     
-    # Update config with best parameters
     best_params = trial.params
-    config['parameters']['neg_ratio'] = int(best_params['neg_ratio'])
-    # Since oversampling is not used, no need for 'multiplier'
-
-    # Remove 'neg_ratio' from best_params before updating model_parameters
-    best_params_copy = best_params.copy()
-    best_params_copy.pop('neg_ratio', None)
-    config['model_parameters'].update(best_params_copy)
 
     # Create results directory if it doesn't exist
     results_folder = config['data_paths'].get('results_folder', 'results/')

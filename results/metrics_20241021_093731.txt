@@ -1,2 +1,0 @@
-Test F1 Score: 0.56998
-Improvement over Benchmark: 13.32%

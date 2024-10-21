@@ -4,6 +4,7 @@ import polars as pl
 from polars import StringCache
 import pandas as pd
 import numpy as np
+from typing import Optional
 
 class PolarsLoader():
     def __init__(self, sampling=False):
@@ -58,33 +59,33 @@ class PolarsLoader():
 
         return df 
     
-    def downsample_data_pl(self, df: pl.DataFrame, neg_ratio: float = None, is_train: bool = True) -> pl.DataFrame:
-        
+    def downsample_data_pl(self, df: pl.DataFrame, neg_ratio: Optional[float] = None, is_train: bool = True) -> pl.DataFrame:
         """
-        Downsample the negative class of a DataFrame if is_train is True.
+        Downsample the negative class of a DataFrame if is_train is True and neg_ratio is not 0.
 
         Parameters:
-            df (polars.DataFrame): DataFrame to be downsampled.
-            neg_ratio (float): Ratio of negative samples to positive samples. If None, all negative samples are used. Defaults to None.
-            is_train (bool): If True, downsamples data. Defaults to True.
+        df (polars.DataFrame): DataFrame to be downsampled.
+        neg_ratio (float, optional): Ratio of negative samples to positive samples. 
+                                    If None or 0, all negative samples are used. Defaults to None.
+        is_train (bool): If True, considers downsampling data. Defaults to True.
 
         Returns:
-            polars.DataFrame: Downsampled DataFrame if is_train is True.
+        polars.DataFrame: Downsampled DataFrame if is_train is True and neg_ratio > 0, otherwise original DataFrame.
         """
-        if is_train:
-            # Extract the counts of positive and negative cases
-            p_cases = df.filter(pl.col('target') == 1)
-            n_cases = df.filter(pl.col('target') == 0)
+        if not is_train or neg_ratio == 0:
+            return df
 
-            # If neg_ratio is None use all negative samples
-            if neg_ratio is not None:
-                N = int(p_cases.height * neg_ratio)
-                n_cases = n_cases.sample(n=N, seed=23)
-            
-            # Concatenar los casos negativos y positivos
-            df = pl.concat([n_cases, p_cases])
-            
-        return df
+        # Extract the counts of positive and negative cases
+        p_cases = df.filter(pl.col('target') == 1)
+        n_cases = df.filter(pl.col('target') == 0)
+
+        # If neg_ratio is provided and valid, downsample negative cases
+        if neg_ratio is not None and neg_ratio > 0:
+            n_negative_samples = int(p_cases.height * neg_ratio)
+            n_cases = n_cases.sample(n=n_negative_samples, seed=23)
+
+        # Concatenate the negative and positive cases
+        return pl.concat([n_cases, p_cases])
     
     def set_datatypes(self, df):
         """

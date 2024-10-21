@@ -97,69 +97,70 @@ class FeatureEngineering:
                 ])
         
         df = df.with_columns([
-                        ((pl.col(col) - pl.col(col).mean().over('hour_band')) / (pl.col(col).std().over('hour_band') + 1e-6)).
-                        alias(f'{col}_hour_band_norm') for col in float_cols
+                        ((pl.col(col) - pl.col(col).mean().over('dsp')) / (pl.col(col).std().over('dsp') + 1e-6)).
+                        alias(f'{col}_dsp_norm') for col in float_cols
                 ])
         
         df = df.with_columns([
-                        ((pl.col(col) - pl.col(col).mean().over('auctionBidFloorSource')) / (pl.col(col).std().over('auctionBidFloorSource') + 1e-6)).
-                        alias(f'{col}_auctionBidFloorSource_norm') for col in float_cols
+                        ((pl.col(col) - pl.col(col).mean().over('hour_cat')) / (pl.col(col).std().over('hour_cat') + 1e-6)).
+                        alias(f'{col}_hour_cat_norm') for col in float_cols
                 ])       
 
         norm_cols = (
-            [col + '_country_norm' for col in float_cols] + 
-            [col + '_hour_band_norm' for col in float_cols] + 
-            [col + '_auctionBidFloorSource_norm' for col in float_cols]
+            [col + '_country_norm' for col in float_cols] +
+            [col + '_dsp_norm' for col in float_cols] + 
+            [col + '_hour_cat_norm' for col in float_cols]
         )
 
         return df, norm_cols
   
-    def encode_categoricals(self, df, cat_cols, is_train=True):
-        """
-        Encodes categorical columns using OrdinalEncoder.
+    # def encode_categoricals(self, df, cat_cols, is_train=True):
+    #     """
+    #     Encodes categorical columns using OrdinalEncoder.
         
-        Parameters:
-        - df (pl.DataFrame): The input DataFrame.
-        - cat_cols (list): List of categorical column names to encode.
-        - is_train (bool): Flag indicating whether the data is training data.
+    #     Parameters:
+    #     - df (pl.DataFrame): The input DataFrame.
+    #     - cat_cols (list): List of categorical column names to encode.
+    #     - is_train (bool): Flag indicating whether the data is training data.
         
-        Returns:
-        - pl.DataFrame: The DataFrame with encoded categorical columns.
-        """
-        if is_train:
-            # Initialize and fit the encoder on training data
-            self.category_encoder = OrdinalEncoder(
-                categories='auto', dtype=np.int16, 
-                handle_unknown='use_encoded_value', 
-                unknown_value=-2, encoded_missing_value=-1
-            )
-            # Fit and transform the category columns
-            data_encoded = self.category_encoder.fit_transform(df.select(cat_cols))
-        else:
-            # Ensure the encoder has been fitted
-            if self.category_encoder is None:
-                raise ValueError("The encoder has not been fitted. Call encode_categoricals with is_train=True first.")
-            # Transform the test data with the same encoder
-            data_encoded = self.category_encoder.transform(df.select(cat_cols))
+    #     Returns:
+    #     - pl.DataFrame: The DataFrame with encoded categorical columns.
+    #     """
+    #     if is_train:
+    #         # Initialize and fit the encoder on training data
+    #         self.category_encoder = OrdinalEncoder(
+    #             categories='auto', dtype=np.int16, 
+    #             handle_unknown='use_encoded_value', 
+    #             unknown_value=-2, encoded_missing_value=-1
+    #         )
+    #         # Fit and transform the category columns
+    #         data_encoded = self.category_encoder.fit_transform(df.select(cat_cols))
+    #     else:
+    #         # Ensure the encoder has been fitted
+    #         if self.category_encoder is None:
+    #             raise ValueError("The encoder has not been fitted. Call encode_categoricals with is_train=True first.")
+    #         # Transform the test data with the same encoder
+    #         data_encoded = self.category_encoder.transform(df.select(cat_cols))
         
-        # Assign the transformed categories back to the Polars DataFrame
-        encoded_columns = [
-            pl.Series(cat_col, data_encoded[:, idx]) 
-            for idx, cat_col in enumerate(cat_cols)
-        ]
-        df = df.with_columns(encoded_columns)
+    #     # Assign the transformed categories back to the Polars DataFrame
+    #     encoded_columns = [
+    #         pl.Series(cat_col, data_encoded[:, idx]) 
+    #         for idx, cat_col in enumerate(cat_cols)
+    #     ]
+    #     df = df.with_columns(encoded_columns)
         
-        # Cast all the cat_cols back to categorical
-        df = df.with_columns([
-            pl.col(col).cast(pl.String).cast(pl.Categorical) for col in cat_cols
-        ])
+    #     # Cast all the cat_cols back to categorical
+    #     df = df.with_columns([
+    #         pl.col(col).cast(pl.String).cast(pl.Categorical) for col in cat_cols
+    #     ])
         
-        return df
+    #     return df
     
     def proccess(self, df, cat_cols, is_train=True):
+        
+        new_cols = []
 
         with StringCache():
-
             # Feature engineering
             df, new_cols, new_cat_cols = self.feature_engineering(df, is_train)
             cat_cols += new_cat_cols

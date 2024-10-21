@@ -8,25 +8,23 @@ data_paths:
 
 parameters:
   benchmark_f1: 0.503
-  neg_ratio: 6.683341808962789 # Tuned # Best before 5
-  sampling: True
-  check_feature_importance: True
+  neg_ratio: 4.919339318126806 # Tuned
+  sampling: False
+  check_feature_importance: False
 
-model_parameters:
+model_parameters: # Tuned
   objective: 'binary'
   metric: 'f1'
   verbose: -1
   random_state: 23
   boosting_type: 'gbdt'
-  n_estimators: 469 # Tuned
-  num_leaves: 128
-  learning_rate: 0.14177380106482101
-  subsample: 0.6110535775752338
-  colsample_bytree: 0.8716627599826557
-  reg_alpha: 2.127514601402151
-  reg_lambda: 6.6903430013426295
+  n_estimators: 500
+  learning_rate: 0.05601405924916412
+  max_depth: 6
+  num_leaves: 35
+  subsample: 0.8903345089717967
+  lambda_l2: 0.00031416100090784403
   
-
 training_parameters:
   do_oversampling: False
   do_crossvalidation: False
