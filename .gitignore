@@ -1,6 +1,7 @@
 # Project specific
 data/
 mlruns/
+results/to_send/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
