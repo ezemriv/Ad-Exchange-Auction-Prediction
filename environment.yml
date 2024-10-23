@@ -1,4 +1,4 @@
-name: ad_exchange_pred_test2
+name: ad_exchange_pred
 channels:
   - conda-forge
   - defaults
