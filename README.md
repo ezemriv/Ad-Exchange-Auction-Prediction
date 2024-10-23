@@ -32,3 +32,10 @@ To set up the environment and run the project:
       ```bash
       python main.py
       ```
+
+5. Play around with configuration file parameters.
+
+6. Run mlflow to follow experiments metrics and parameters:
+      ```bash
+      mlflow ui
+      ```
