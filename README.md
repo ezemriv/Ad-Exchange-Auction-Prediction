@@ -1,3 +1,5 @@
+<img src="https://img.shields.io/badge/Polars-white?logo=polars" style="height: 25px; width: auto;"> <img src="https://img.shields.io/badge/pandas-white?logo=pandas&logoColor=250458" style="height: 25px; width: auto;"> <img src="https://img.shields.io/badge/NumPy-white?logo=numpy&logoColor=013243" style="height: 25px; width: auto;"> <img src="https://img.shields.io/badge/Scikit--learn-white?logo=scikit-learn" style="height: 25px; width: auto;"> <img src="https://img.shields.io/badge/LightGBM-white?logo=LightGBM" style="height: 25px; width: auto;"> <img src="https://img.shields.io/badge/MLflow-white?logo=MLflow" style="height: 25px; width: auto;"> <img src="https://img.shields.io/badge/Optuna-white?logo=python" style="height: 25px; width: auto;">
+
 # Ad Exchange Prediction Project
 
 ## Project Goal
